@@ -8,6 +8,7 @@ import pandas as pd
 import numpy as np
 import sklearn.linear_model as slm
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 filename = "winequality-red.csv"
 
@@ -287,7 +288,7 @@ def cross_validate(method, X, Y):
     best_d = None
     best_est = dict()
     
-    mu_values = np.arange(0,10,0.1)
+    mu_values = np.arange(0,1,0.1)
     
     if method == "EDE":
         d_values = np.arange(1,X.shape[1])
@@ -319,15 +320,19 @@ def cross_validate(method, X, Y):
             ind += 1
         
     elif method == "EDE":
+        i, j = 0, 0
+        r2_values = np.zeros((len(mu_values),len(d_values)))
         for mu in mu_values:
+            j=0
             for d in d_values:
-                est, r2_values[ind] = exterior_derivative_estimation(X, Y, mu, d, print_option = False)
-                if r2_values[ind] > best_r2:
-                    best_r2 = r2_values[-1]
+                est, r2_values[i][j] = exterior_derivative_estimation(X, Y, mu, d, print_option = False)
+                if r2_values[i][j] > best_r2:
+                    best_r2 = r2_values[i][j]
                     best_mu = mu
                     best_d = d
                     best_est = est
-                ind += 1
+                j += 1
+            i += 1
         
     else:
         print "Error: method should be 'lasso', 'least squares', 'ridge' or 'EDE'"
@@ -347,9 +352,29 @@ def cross_validate(method, X, Y):
         plt.title("Cross Validation for " + method + " regression")
         plt.show()
         
+    else:
+        fig = plt.figure(figsize=(10, 7))
+        ax = fig.gca(projection='3d')
+        x = mu_values
+        y = d_values
+        X, Y = np.meshgrid(x, y)
+        Z = r2_values
+        print(X.shape, 'h', Y.shape, 'h', Z.shape)
+        surf = ax.plot_surface(X, Y, Z, rstride=1, cstride=1, cmap=plt.cm.coolwarm,
+                linewidth=0, antialiased=False)
+        
+#         ax.set_zlim(0.51, 0.53)
+        
+        ax.zaxis.set_major_locator(plt.LinearLocator(10))
+        ax.zaxis.set_major_formatter(plt.FormatStrFormatter('%.02f'))
+        
+        fig.colorbar(surf, shrink=0.5, aspect=7, cmap=plt.cm.coolwarm)
+        
+        plt.show()
+        
     return best_est
     
 
 X, Y = getData(filename)
-cross_validate('ridge', X, Y)
+cross_validate('EDE', X, Y)
 
