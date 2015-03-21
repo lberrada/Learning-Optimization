@@ -7,6 +7,7 @@ import statsmodels.api as sap
 import pandas as pd
 import numpy as np
 import sklearn.linear_model as slm
+import matplotlib.pyplot as plt
 
 filename = "winequality-red.csv"
 
@@ -30,7 +31,30 @@ def getData(filename):
 #     X = sap.add_constant(X)
     return X, Y
 
-def least_squares(X, Y, predictors, print_option = True):
+def get_error(X, Y, beta, shape):
+    """compute adjusted error given data, coefficients and data size"""
+        
+    # get data shape
+    n, p = shape
+    
+    # compute sum of square of residuals
+    SSR = nlg.norm(Y-np.dot(X,beta)) ** 2
+    
+    # compute sum of squares
+    m = np.mean(Y)
+    SS = nlg.norm(Y - m) ** 2
+    
+    # compute r2
+    r2 = 1 - SSR / SS
+    
+    # compute adjusted r2
+    adj_r2 = r2 + (1 - r2) * p / (n - p - 1)
+    
+    # return result
+    return adj_r2
+    
+
+def least_squares(X, Y, shape, predictors, print_option = True):
     """apply ordinary-least-squares regression on (X,Y)
     
     :param X predictors data
@@ -44,6 +68,9 @@ def least_squares(X, Y, predictors, print_option = True):
     # compute beta
     beta = np.array(np.dot(np.dot(nlg.inv(XtX),X.transpose()),Y)).flatten()
     
+    # compute error
+    r2 = get_error(X, Y, beta, shape)
+    
     # create estimator dictionary
     est = dict()
     
@@ -53,10 +80,11 @@ def least_squares(X, Y, predictors, print_option = True):
         
     # print results if needed
     if print_option:
+        print "Error : ", r2
         print est
     
     # return result
-    return est
+    return est, r2
 
 def ordinary_least_squares(X, Y, print_option = True):
     """apply ordinary-least-squares regression on (X,Y) with an interception term
@@ -71,16 +99,17 @@ def ordinary_least_squares(X, Y, print_option = True):
     
     # get data shape
     n, p = X.shape
+    shape = (n,p)
     
     # create data matrix by block
     one_vec = np.ones((n,1))
     big_X = np.concatenate([one_vec, X], axis = 1)
     
     # compute estimator
-    est = least_squares(big_X, Y, predictors, print_option)
+    est, r2 = least_squares(big_X, Y, shape, predictors, print_option)
     
     # return result
-    return est
+    return est, r2
     
 
 def ridge_regression(X, Y, mu, print_option = True):
@@ -97,6 +126,7 @@ def ridge_regression(X, Y, mu, print_option = True):
     
     # find n number of rows and p number of cols
     n, p = X.shape
+    shape = (n, p)
     
     # create numpy arrays for block matrices (X)
     X_matrix = X.as_matrix()
@@ -119,10 +149,10 @@ def ridge_regression(X, Y, mu, print_option = True):
     big_Y = np.concatenate([Y_vec, zero_vec])
     
     # apply ordinary least squares on big matrices
-    est = least_squares(big_X, big_Y, predictors, print_option)
+    est, r2 = least_squares(big_X, big_Y, shape, predictors, print_option)
     
     # retru result
-    return est
+    return est, r2
 
 def lasso_regression(X, Y, mu, print_option = True):
     """apply lasso regression on (X,Y) with L1-regularization parameter mu
@@ -137,6 +167,7 @@ def lasso_regression(X, Y, mu, print_option = True):
     
     # get data shape
     n, p = X.shape
+    shape = (n, p)
     
     # create data matrix by block
     one_vec = np.ones((n,1))
@@ -144,10 +175,13 @@ def lasso_regression(X, Y, mu, print_option = True):
     
     # compute regression
     clf = slm.Lasso(alpha = mu)
-    clf.fit(big_X,Y)
+    clf.fit(big_X, Y)
     
     # get estimator
     beta = clf.coef_
+        
+    # get error
+    r2 = get_error(big_X, Y, beta, shape)
     
     # create estimator dictionary
     est = dict()
@@ -157,10 +191,11 @@ def lasso_regression(X, Y, mu, print_option = True):
         est[predictors[ind]] = beta[ind]
         
     if print_option:
+        print "Error :", r2
         print est
         
     # return result
-    return est
+    return est, r2
     
 
 def exterior_derivative_estimation(X, Y, mu, d, print_option = True):
@@ -172,6 +207,10 @@ def exterior_derivative_estimation(X, Y, mu, d, print_option = True):
     :param d number of dimensions kept from SVD
     :param print_option 
     :return: est"""
+    
+    # get data shape
+    n, p = X.shape
+    shape = (n, p)
     
     # get predictors
     predictors = ["const"] + X.keys().tolist()
@@ -210,34 +249,107 @@ def exterior_derivative_estimation(X, Y, mu, d, print_option = True):
     big_Y = np.concatenate([Y_vec, zero_vec])
     
     # apply ordinary least squares on big matrices
-    est = least_squares(big_X, big_Y, predictors, print_option)
+    est, r2 = least_squares(big_X, big_Y, shape, predictors, print_option)
     
     # retru result
-    return est
+    return est, r2
 
 def estimate(method, X, Y, mu = None, d = None, print_option = True):
+    """perform linear estimation according to specified method"""
     
     print "Linear estimation with " + method + " method"
     
     if method == "lasso":
-        est = lasso_regression(X, Y, mu, print_option)
+        est, r2 = lasso_regression(X, Y, mu, print_option)
         
     elif method == "least squares":
-        est = ordinary_least_squares(X, Y, print_option)
+        est, r2 = ordinary_least_squares(X, Y, print_option)
         
     elif method == "ridge":
-        est = ridge_regression(X, Y, mu, print_option)
+        est, r2 = ridge_regression(X, Y, mu, print_option)
         
     elif method == "EDE":
-        est = exterior_derivative_estimation(X, Y, mu, d, print_option)
+        est, r2 = exterior_derivative_estimation(X, Y, mu, d, print_option)
         
     else:
         print "Error: method should be 'lasso', 'least squares', 'ridge' or 'EDE'"
         return
     
-    return est
+    return est, r2
+
+def cross_validate(method, X, Y):
+    """perform cross validation for specified method"""
+    
+    print "Cross validation for " + method + " method"
+    
+    best_r2 = 0
+    best_mu = 0
+    best_d = None
+    best_est = dict()
+    
+    mu_values = np.arange(0,10,0.1)
+    
+    if method == "EDE":
+        d_values = np.arange(1,X.shape[1])
+        r2_values = np.zeros(len(mu_values) * len(d_values))
+    else:
+        r2_values = np.zeros(len(mu_values))
+    
+    ind=0
+    
+    if method == "lasso":
+        for mu in mu_values:
+            est, r2_values[ind] = lasso_regression(X, Y, mu, print_option = False)
+            if r2_values[ind] > best_r2:
+                best_r2 = r2_values[-1]
+                best_mu = mu
+                best_est = est
+            ind += 1
+        
+    elif method == "least squares":
+        print "No parameter to tune, no need for cross-validation"
+        
+    elif method == "ridge":
+        for mu in mu_values:
+            est, r2_values[ind] = ridge_regression(X, Y, mu, print_option = False)
+            if r2_values[ind] > best_r2:
+                best_r2 = r2_values[ind]
+                best_mu = mu
+                best_est = est
+            ind += 1
+        
+    elif method == "EDE":
+        for mu in mu_values:
+            for d in d_values:
+                est, r2_values[ind] = exterior_derivative_estimation(X, Y, mu, d, print_option = False)
+                if r2_values[ind] > best_r2:
+                    best_r2 = r2_values[-1]
+                    best_mu = mu
+                    best_d = d
+                    best_est = est
+                ind += 1
+        
+    else:
+        print "Error: method should be 'lasso', 'least squares', 'ridge' or 'EDE'"
+        return
+    
+    print "Best error: ", best_r2
+    print "Best mu: ", best_mu
+    if best_d != None:
+        print "Best d: ", best_d
+    
+    if method != "EDE":
+        fig = plt.figure()
+        ax = fig.add_subplot(1, 1, 1)
+        ax.plot(mu_values, r2_values)
+        ax.set_xlabel('Regularization Parameter')
+        ax.set_ylabel('Adjusted $R^2$')
+        plt.title("Cross Validation for " + method + " regression")
+        plt.show()
+        
+    return best_est
     
 
 X, Y = getData(filename)
-estimate('least squares', X, Y, 1.5 , 2)
+cross_validate('ridge', X, Y)
 
