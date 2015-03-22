@@ -8,7 +8,7 @@ from estimate import estimate
 filename = "winequality-red.csv"
 # option = "estimation"
 option = "cross-validation"
-method = "lasso"
+method = "ridge"
 mu = 1
 d = 5
 print_option = True

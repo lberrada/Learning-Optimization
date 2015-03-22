@@ -6,11 +6,6 @@ import numpy.linalg as nlg
 def get_error(X, Y, beta, shape):
     """compute adjusted error given data, coefficients and data size"""
         
-#     # build coefficient array
-#     beta = np.array([])
-#     for key in est.keys():
-#         beta += [est[key]]    
-        
     # get data shape
     n, p = shape
         

@@ -56,7 +56,7 @@ def exterior_derivative_estimation(X, Y, mu, d, print_option = True):
     big_Y = np.concatenate([Y_vec, zero_vec])
     
     # apply ordinary least squares on big matrices
-    est, r2 = least_squares(big_X, big_Y, shape, predictors, print_option)
+    beta, est, r2 = least_squares(big_X, big_Y, shape, predictors, print_option)
     
     # retru result
-    return est, r2
+    return beta, est, r2

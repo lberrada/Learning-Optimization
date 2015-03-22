@@ -35,4 +35,4 @@ def least_squares(X, Y, shape, predictors, print_option = True):
         print est
     
     # return result
-    return beta, r2
+    return beta, est, r2

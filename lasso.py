@@ -46,4 +46,4 @@ def lasso_regression(X, Y, mu, print_option = True):
         print est
         
     # return result
-    return est, r2
+    return beta, est, r2
