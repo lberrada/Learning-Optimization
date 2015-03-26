@@ -24,7 +24,7 @@ def ordinary_least_squares(X, Y, print_option = True):
     big_X = np.concatenate([one_vec, X], axis = 1)
     
     # compute estimator
-    beta, est, r2 = least_squares(big_X, Y, shape, predictors, print_option)
+    beta, est = least_squares(big_X, Y, shape, predictors, print_option)
     
     # return result
-    return beta, est, r2
+    return beta, est

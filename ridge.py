@@ -41,7 +41,7 @@ def ridge_regression(X, Y, mu, print_option = True):
     big_Y = np.concatenate([Y_vec, zero_vec])
     
     # apply ordinary least squares on big matrices
-    beta, est, r2 = least_squares(big_X, big_Y, shape, predictors, print_option)
+    beta, est = least_squares(big_X, big_Y, shape, predictors, print_option)
     
     # retru result
-    return beta, est, r2
+    return beta, est

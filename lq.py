@@ -18,10 +18,7 @@ def least_squares(X, Y, shape, predictors, print_option = True):
     
     # compute beta
     beta = np.array(np.dot(np.dot(nlg.inv(XtX),X.transpose()),Y)).flatten()
-    
-    # compute error
-    r2 = get_error(X, Y, beta, shape)
-    
+        
     # create estimator dictionary
     est = dict()
     
@@ -31,8 +28,7 @@ def least_squares(X, Y, shape, predictors, print_option = True):
         
     # print results if needed
     if print_option:
-        print "Error : ", r2
         print est
     
     # return result
-    return beta, est, r2
+    return beta, est

@@ -25,14 +25,11 @@ def lasso_regression(X, Y, mu, print_option = True):
     big_X = np.concatenate([one_vec, X], axis = 1)
     
     # compute regression
-    clf = slm.Lasso(alpha = mu)
+    clf = slm.Lasso(alpha = mu, fit_intercept = False)
     clf.fit(big_X, Y)
     
     # get estimator
     beta = clf.coef_
-        
-    # get error
-    r2 = get_error(big_X, Y, beta, shape)
     
     # create estimator dictionary
     est = dict()
@@ -42,8 +39,7 @@ def lasso_regression(X, Y, mu, print_option = True):
         est[predictors[ind]] = beta[ind]
         
     if print_option:
-        print "Error :", r2
         print est
         
     # return result
-    return beta, est, r2
+    return beta, est
