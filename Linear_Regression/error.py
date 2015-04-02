@@ -3,6 +3,8 @@
 import numpy as np
 import numpy.linalg as nlg
 
+from sklearn.metrics import r2_score
+
 def get_error(X, Y, beta, shape):
     """compute adjusted error given data, coefficients and data size"""
      

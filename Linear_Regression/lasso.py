@@ -21,15 +21,16 @@ def lasso_regression(X, Y, mu, print_option = True):
     shape = (n, p)
     
     # create data matrix by block
-    one_vec = np.ones((n,1))
-    big_X = np.concatenate([one_vec, X], axis = 1)
+#     one_vec = np.ones((n,1))
+#     big_X = np.concatenate([one_vec, X], axis = 1)
+    big_X = X
     
     # compute regression
-    clf = slm.Lasso(alpha = mu, fit_intercept = False)
+    clf = slm.Lasso(alpha = mu, fit_intercept = True)
     clf.fit(big_X, Y)
     
     # get estimator
-    beta = clf.coef_
+    beta = np.array([clf.intercept_] + clf.coef_.tolist())
     
     # create estimator dictionary
     est = dict()

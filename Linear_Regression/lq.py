@@ -3,8 +3,6 @@
 import numpy as np
 import numpy.linalg as nlg
 
-from error import get_error
-
 def least_squares(X, Y, shape, predictors, print_option = True):
     """apply ordinary-least-squares regression on (X,Y)
     

@@ -2,14 +2,16 @@
 
 import numpy as np
 import pandas as pd
+import sklearn.cross_validation as skc
 
 from lasso import lasso_regression
 from ridge import ridge_regression
 from ede import exterior_derivative_estimation
+from ols import ordinary_least_squares
 from error import get_error
 from visualize import visualize
 
-def cross_validate(method, X, Y, training_fraction=0.8):
+def cross_validate(method, X, Y, n_folds=10):
     """perform cross validation for specified method"""
     
     print "Cross validation for " + method + " method"
@@ -22,77 +24,135 @@ def cross_validate(method, X, Y, training_fraction=0.8):
     
     # declare variables for data sizes
     n, p = X.shape
-    n_train = int(0.8 * n)
-    n_test = n - n_train
-    shape = (n_test, p)
     
-    # shuffle indices
-    shuffled_indices = range(n)
-    np.random.shuffle(shuffled_indices)
-    
-    # create training and validation sets    
-    X_train = X.iloc[shuffled_indices[:n_train]]
-    Y_train = Y.iloc[shuffled_indices[:n_train]]
-    X_test = X.iloc[shuffled_indices[n_train:]]
-    Y_test = Y.iloc[shuffled_indices[n_train:]]
-    
-    # transform into dataframes to keep variables names
-    one_test = np.ones((n_test,1))
-    X_train = pd.DataFrame(X_train, columns = X.keys().tolist())
-    X_test = pd.DataFrame(np.concatenate([one_test, X_test], axis = 1), columns = ["const"]+X.keys().tolist())
-    
-    # declare additional variables fror EDE method
-    if method == "EDE":
-        mu_values = np.arange(0.001,0.1,0.01)
-        d_values = np.arange(1,X.shape[1])
-        r2_values = np.zeros(len(mu_values) * len(d_values))
-    else:
-        d_values = None
-        mu_values = np.arange(0.000001,0.02,0.0001)
-        r2_values = np.zeros(len(mu_values))
+    indices = skc.KFold(n, n_folds=n_folds)
     
     ind=0
     
     # LASSO
     if method == "lasso":
+        d_values = None
+        mu_values = np.arange(0.00001,0.05,0.001)
+        r2_values = np.zeros(len(mu_values))
         for mu in mu_values:
-            beta, _ = lasso_regression(X_train, Y_train, mu, print_option = False)
-            r2_values[ind] = get_error(X_test, Y_test, beta, shape)
+            r2_values[ind] = 0
+            for train_indices, test_indices in indices:
+                
+                shape = (len(test_indices), p)
+    
+                # create training and validation sets    
+                X_train = X.iloc[train_indices]
+                Y_train = Y.iloc[train_indices]
+                X_test = X.iloc[test_indices]
+                Y_test = Y.iloc[test_indices]
+    
+                # transform into dataframes to keep variables names
+                one_test = np.ones((len(test_indices),1))
+                X_train = pd.DataFrame(X_train, columns = X.keys().tolist())
+                X_test = pd.DataFrame(np.concatenate([one_test, X_test], axis = 1), columns = ["const"]+X.keys().tolist())
+                beta, est = lasso_regression(X_train, Y_train, mu, print_option = False)
+                r2_values[ind] += get_error(X_test, Y_test, beta, shape)
+            
+            r2_values[ind] /= n_folds
             if r2_values[ind] > best_r2:
                 best_r2 = r2_values[ind]
                 best_mu = mu
-                best_est = beta
+                best_est = est
             ind += 1
     
     # LEAST SQUARES    
     elif method == "least squares":
-        print "No parameter to tune, no need for cross-validation"
+        print "No parameter to tune for least squares estimation"
+        r2 = 0
+        for train_indices, test_indices in indices:
+                
+            shape = (len(test_indices), p)
+
+            # create training and validation sets    
+            X_train = X.iloc[train_indices]
+            Y_train = Y.iloc[train_indices]
+            X_test = X.iloc[test_indices]
+            Y_test = Y.iloc[test_indices]
+
+            # transform into dataframes to keep variables names
+            one_test = np.ones((len(test_indices),1))
+            X_train = pd.DataFrame(X_train, columns = X.keys().tolist())
+            X_test = pd.DataFrame(np.concatenate([one_test, X_test], axis = 1), columns = ["const"]+X.keys().tolist())
+            beta, est = ordinary_least_squares(X_train, Y_train, print_option = False)
+            r2 += get_error(X_test, Y_test, beta, shape)
+        
+        r2 /= n_folds
+        best_est = est
+        best_r2 = r2
+        best_mu = None
+        
     
     # RIDGE   
     elif method == "ridge":
+        d_values = None
+        mu_values = np.arange(0.001,5,0.01)
+        r2_values = np.zeros(len(mu_values))
         for mu in mu_values:
-            beta, _ = ridge_regression(X_train, Y_train, mu, print_option = False)
-            r2_values[ind] = get_error(X_test, Y_test, beta, shape)
+            r2_values[ind] = 0
+            for train_indices, test_indices in indices:
+                
+                shape = (len(test_indices), p)
+    
+                # create training and validation sets    
+                X_train = X.iloc[train_indices]
+                Y_train = Y.iloc[train_indices]
+                X_test = X.iloc[test_indices]
+                Y_test = Y.iloc[test_indices]
+    
+                # transform into dataframes to keep variables names
+                one_test = np.ones((len(test_indices),1))
+                X_train = pd.DataFrame(X_train, columns = X.keys().tolist())
+                X_test = pd.DataFrame(np.concatenate([one_test, X_test], axis = 1), columns = ["const"]+X.keys().tolist())
+                beta, est = ridge_regression(X_train, Y_train, mu, print_option = False)
+                r2_values[ind] += get_error(X_test, Y_test, beta, shape)
+            
+            r2_values[ind] /= n_folds
             if r2_values[ind] > best_r2:
                 best_r2 = r2_values[ind]
                 best_mu = mu
-                best_est = beta
+                best_est = est
             ind += 1
     
     # EDE    
     elif method == "EDE":
+        mu_values = np.arange(0.001,10,1)
+        d_values = np.arange(1,X.shape[1])
+        r2_values = np.zeros(len(mu_values) * len(d_values))
         i, j = 0, 0
         r2_values = np.zeros((len(mu_values),len(d_values)))
         for mu in mu_values:
             j=0
             for d in d_values:
-                beta, _ = exterior_derivative_estimation(X_train, Y_train, mu, d, print_option = False)
-                r2_values[i][j] = get_error(X_test, Y_test, beta, shape)
+                r2_values[i][j] = 0
+                for train_indices, test_indices in indices:
+                    
+                    shape = (len(test_indices), p)
+        
+                    # create training and validation sets    
+                    X_train = X.iloc[train_indices]
+                    Y_train = Y.iloc[train_indices]
+                    X_test = X.iloc[test_indices]
+                    Y_test = Y.iloc[test_indices]
+        
+                    # transform into dataframes to keep variables names
+                    one_test = np.ones((len(test_indices),1))
+                    X_train = pd.DataFrame(X_train, columns = X.keys().tolist())
+                    X_test = pd.DataFrame(np.concatenate([one_test, X_test], axis = 1), columns = ["const"]+X.keys().tolist())
+                    beta, est = exterior_derivative_estimation(X_train, Y_train, mu, d, print_option = False)
+                    r2_values[i][j] += get_error(X_test, Y_test, beta, shape)
+                
+                r2_values[i][j] /= n_folds
+            
                 if r2_values[i][j] > best_r2:
                     best_r2 = r2_values[i][j]
                     best_mu = mu
                     best_d = d
-                    best_est = beta
+                    best_est = est
                 j += 1
             i += 1
         
@@ -107,6 +167,7 @@ def cross_validate(method, X, Y, training_fraction=0.8):
         print "Best d: ", best_d
     
     # visualize results 
-    visualize(method, mu_values, r2_values, d_values)
+    if best_mu != None:
+        visualize(method, mu_values, r2_values, d_values)
         
     return best_est
