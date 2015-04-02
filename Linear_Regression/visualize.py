@@ -13,7 +13,7 @@ def visualize(method, mu_values, r2_values, d_values = None):
         fig = plt.figure()
         ax = fig.add_subplot(1, 1, 1)
         ax.plot(mu_values, r2_values)
-        ax.set_xlabel('Regularization Parameter')
+        ax.set_xlabel('$\mu$')
         ax.set_ylabel('Adjusted $R^2$')
         plt.title("Cross Validation for " + method + " regression")
         plt.show()
@@ -22,8 +22,8 @@ def visualize(method, mu_values, r2_values, d_values = None):
         # plot Adjusted R2 against mu and d
         fig = plt.figure(figsize=(10, 7))
         ax = fig.gca(projection='3d')
-        x = mu_values
-        y = d_values
+        x = d_values
+        y = mu_values
         X, Y = np.meshgrid(x, y)
         Z = r2_values.transpose()
 

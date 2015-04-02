@@ -3,30 +3,11 @@
 import numpy as np
 import numpy.linalg as nlg
 
-def least_squares(X, Y, shape, predictors, print_option = True):
-    """apply ordinary-least-squares regression on (X,Y)
+def least_squares(X, Y):
+    from sklearn.linear_model import LinearRegression
     
-    :param X predictors data
-    :param Y result
-    :param print_option 
-    :return: est (dictionary)"""
-
-    # compute X'X
-    XtX = np.matrix(np.dot(X.transpose(),X))
-    
-    # compute beta
-    beta = np.array(np.dot(np.dot(nlg.inv(XtX),X.transpose()),Y)).flatten()
+    clf = LinearRegression(fit_intercept=False)
+    clf.fit(X, Y)
         
-    # create estimator dictionary
-    est = dict()
+    return clf
     
-    # relate to predictors
-    for ind in range(len(predictors)):
-        est[predictors[ind]] = beta[ind]
-        
-    # print results if needed
-    if print_option:
-        print est
-    
-    # return result
-    return beta, est

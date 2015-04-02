@@ -52,8 +52,10 @@ def cross_validate(method, X, Y, n_folds=10):
                 one_test = np.ones((len(test_indices),1))
                 X_train = pd.DataFrame(X_train, columns = X.keys().tolist())
                 X_test = pd.DataFrame(np.concatenate([one_test, X_test], axis = 1), columns = ["const"]+X.keys().tolist())
+                X_test = pd.DataFrame(X_test, columns = X.keys().tolist())
                 beta, est = lasso_regression(X_train, Y_train, mu, print_option = False)
-                r2_values[ind] += get_error(X_test, Y_test, beta, shape)
+#                 r2_values[ind] += get_error(X_test, Y_test, beta, shape)
+                r2_values[ind] += beta.score(X_test, Y_test)
             
             r2_values[ind] /= n_folds
             if r2_values[ind] > best_r2:
@@ -110,8 +112,10 @@ def cross_validate(method, X, Y, n_folds=10):
                 one_test = np.ones((len(test_indices),1))
                 X_train = pd.DataFrame(X_train, columns = X.keys().tolist())
                 X_test = pd.DataFrame(np.concatenate([one_test, X_test], axis = 1), columns = ["const"]+X.keys().tolist())
+                X_test = pd.DataFrame(X_test, columns = X.keys().tolist())
                 beta, est = ridge_regression(X_train, Y_train, mu, print_option = False)
-                r2_values[ind] += get_error(X_test, Y_test, beta, shape)
+#                 r2_values[ind] += get_error(X_test, Y_test, beta, shape)
+                r2_values[ind] += beta.score(X_test, Y_test)
             
             r2_values[ind] /= n_folds
             if r2_values[ind] > best_r2:

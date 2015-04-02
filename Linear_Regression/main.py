@@ -1,34 +1,28 @@
 # coding utf-8
 
 from get_data import getData
-from cross_validation import cross_validate
-from estimate import estimate
-
+from lasso import lasso_regression
+from ols import ordinary_least_squares
+from ridge import ridge_regression
+from ede import exterior_derivative_estimation
 
 filename = "winequality-red.csv"
-# option = "estimation"
-option = "cross-validation"
-method = "EDE" #"ridge", "lasso", "least squares", "EDE"
+method = "EDE" #"ridge", "lasso", "OLS", "EDE"
+n_folds = 10
 
 X, Y = getData(filename)
 labels = list(X.columns.values)
-# print labels
+    
+if method == "lasso":
+    lasso_regression(X, Y, n_folds)
+        
+elif method == "OLS":
+    ordinary_least_squares(X, Y, n_folds)
+    
+elif method == "ridge":
+    ridge_regression(X, Y, n_folds)
+    
+elif method == "EDE":
+    exterior_derivative_estimation(X, Y, n_folds)
 
-if option == "estimate":
-    print_option = True
-    mu = 1
-    d = 5
-    estimate(method, X, Y, mu, d, print_option)
-
-elif option == "cross-validation":
-    n_folds = 10
-    print "="*50
-    print "Cross-Validation"
-    print "="*50
-    best = cross_validate(method, X, Y, n_folds)
-    print "="*50
-    print "Coefficients"
-    print "="*50
-    for key in best.keys():
-        print key + " : " + str(best[key])
     
