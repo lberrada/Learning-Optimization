@@ -25,8 +25,10 @@ def cross_validate(method, X, Y, n_folds=10):
     # declare variables for data sizes
     n, p = X.shape
     
-    indices = skc.KFold(n, n_folds=n_folds)
+    # create cross-validation indices
+    indices = skc.KFold(n, n_folds = n_folds)
     
+    # initialize index
     ind=0
     
     # LASSO
