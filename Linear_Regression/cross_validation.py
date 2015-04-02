@@ -26,11 +26,15 @@ def cross_validate(method, X, Y, training_fraction=0.8):
     n_test = n - n_train
     shape = (n_test, p)
     
-    # create training and validation sets
-    X_train = X[:n_train]
-    Y_train = Y[:n_train]
-    X_test = X[n_train:]
-    Y_test = Y[n_train:]
+    # shuffle indices
+    shuffled_indices = range(n)
+    np.random.shuffle(shuffled_indices)
+    
+    # create training and validation sets    
+    X_train = X.iloc[shuffled_indices[:n_train]]
+    Y_train = Y.iloc[shuffled_indices[:n_train]]
+    X_test = X.iloc[shuffled_indices[n_train:]]
+    Y_test = Y.iloc[shuffled_indices[n_train:]]
     
     # transform into dataframes to keep variables names
     one_test = np.ones((n_test,1))
@@ -39,12 +43,12 @@ def cross_validate(method, X, Y, training_fraction=0.8):
     
     # declare additional variables fror EDE method
     if method == "EDE":
-        mu_values = np.arange(1,10,1)
+        mu_values = np.arange(0.001,0.1,0.01)
         d_values = np.arange(1,X.shape[1])
         r2_values = np.zeros(len(mu_values) * len(d_values))
     else:
         d_values = None
-        mu_values = np.arange(0.1,10,0.1)
+        mu_values = np.arange(0.000001,0.02,0.0001)
         r2_values = np.zeros(len(mu_values))
     
     ind=0
@@ -55,7 +59,7 @@ def cross_validate(method, X, Y, training_fraction=0.8):
             beta, _ = lasso_regression(X_train, Y_train, mu, print_option = False)
             r2_values[ind] = get_error(X_test, Y_test, beta, shape)
             if r2_values[ind] > best_r2:
-                best_r2 = r2_values[-1]
+                best_r2 = r2_values[ind]
                 best_mu = mu
                 best_est = beta
             ind += 1
