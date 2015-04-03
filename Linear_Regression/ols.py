@@ -1,12 +1,14 @@
 # coding utf-8
 
 import numpy as np
-import pandas as pd
 import sklearn.cross_validation as skc
+import pandas as pd
 
 from lq import least_squares
+from visualize import visualize
 
-def ordinary_least_squares(X, Y, n_folds = 10):
+
+def estimate(X, Y, *args, **kwargs):
     """apply ordinary-least-squares regression on (X,Y) with an interception term
     
     :param X predictors data
@@ -19,40 +21,19 @@ def ordinary_least_squares(X, Y, n_folds = 10):
     
     # get data shape
     n, p = X.shape
-
-    # create cross-validation indices
-    indices = skc.KFold(n, n_folds = n_folds)
-        
+    shape = (n,p)
+    
     # create data matrix by block
     one_vec = np.ones((n,1))
-    big_X = pd.DataFrame(np.concatenate([one_vec, X], axis = 1), columns = predictors)
+    big_X = np.concatenate([one_vec, X], axis = 1)
     
-    print "No parameter to tune for OLS estimation"
-    r2 = 0
-    for train_indices, test_indices in indices:
-            
-        # create training and validation sets    
-        X_train = big_X.iloc[train_indices]
-        Y_train = Y.iloc[train_indices]
-        X_test = big_X.iloc[test_indices]
-        Y_test = Y.iloc[test_indices]
-
-        clf = least_squares(X_train, Y_train)
-        beta = clf.coef_.tolist()
-        r2 += clf.score(X_test, Y_test)
-        
-    r2 /= n_folds
-
-    # create estimator dictionary
-    est = dict()
-
-    # relate to predictors
-    for ind in range(len(predictors)):
-        est[predictors[ind]] = beta[ind]
+    # compute estimator
+    beta, est = least_squares(big_X, Y, predictors)
+    r2 = beta.score(big_X, Y)
     
     # print results
     print "="*50
-    print "Cross-Validation"
+    print "Error Estimation"
     print "="*50
     print "Adjusted R2: ", r2
 
@@ -62,3 +43,5 @@ def ordinary_least_squares(X, Y, n_folds = 10):
     for key in est.keys():
         print key + " : " + str(est[key])
     
+    # return result
+    return beta, est

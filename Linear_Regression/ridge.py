@@ -1,13 +1,13 @@
 # coding utf-8
 
 import numpy as np
-import pandas as pd
 import sklearn.cross_validation as skc
-from visualize import visualize
+import pandas as pd
 
 from lq import least_squares
+from visualize import visualize
 
-def ridge_regression(X, Y, n_folds = 10):
+def estimate(X, Y, mu):
     """apply ridge regression on (X,Y) with regularization parameter mu
     
     :param X predictors data
@@ -21,73 +21,12 @@ def ridge_regression(X, Y, n_folds = 10):
     
     # find n number of rows and p number of cols
     n, p = X.shape
-    
-    # get predictors
-    predictors = ["const"] + X.keys().tolist()
-    
-    # auxiliary variables to store best results
-    best_r2 = 0
-    best_mu = 0
-    best_d = None
-    
-    # create cross-validation indices
-    indices = skc.KFold(n, n_folds = n_folds)
-    
-    # initialize index
-    
-    # create numpy arrays for block matrices (Y)
-    Y_vec = Y.as_matrix()
-    zero_vec1 = np.zeros(p)
-    
-    # concatenate in big vector
-    big_Y = pd.DataFrame(np.concatenate([Y_vec, zero_vec1]))
-    
-    one_vec = np.ones((n,1))
-    zero_vec2 = np.zeros((p,1))
-    
-    ind=0
-    
-    # create data matrix by block
-    one_vec = np.ones((n,1))
-    mu_values = np.arange(0.00001,10,0.1)
-    r2_values = np.zeros(len(mu_values))
-    for mu in mu_values:
-        # create numpy arrays for block matrices (X)
-        mu_matrix = mu * np.identity(p)
-        
-        # concatenate in upper and lower block matrices (X)
-        lower_block = np.concatenate([zero_vec2, mu_matrix], axis = 1)
-        
-        r2_values[ind] = 0
-        for train_indices, test_indices in indices:
-            
-            # concatenate in upper and lower block matrices (X)
-            upper_block_train = np.concatenate([one_vec[train_indices], X.iloc[train_indices].as_matrix()], axis = 1)
-            upper_block_test = np.concatenate([one_vec[test_indices], X.iloc[test_indices].as_matrix()], axis = 1)
-            
-            # concatenate in big matrix (X)
-            X_train = pd.DataFrame(np.concatenate([upper_block_train, lower_block], axis =0), columns = predictors)
-            X_test = pd.DataFrame(np.concatenate([upper_block_test, lower_block], axis =0), columns = predictors)
-            
-            # create validation sets   
-            Y_train = pd.DataFrame(np.concatenate([Y.iloc[train_indices].as_matrix(), zero_vec1], axis =0)) 
-            Y_test = pd.DataFrame(np.concatenate([Y.iloc[test_indices].as_matrix(), zero_vec1], axis =0)) 
-            
-            # fit regression and compute score
-            clf = least_squares(X_train, Y_train)
-            r2_values[ind] += clf.score(X_test, Y_test)
-        
-        # normalize score
-        r2_values[ind] /= n_folds
-        if r2_values[ind] > best_r2:
-            best_r2 = r2_values[ind]
-            best_mu = mu
-        ind += 1      
+    shape = (n, p)
     
     # create numpy arrays for block matrices (X)
     X_matrix = X.as_matrix()
     one_vec = np.ones((n,1))
-    mu_matrix = best_mu * np.identity(p)
+    mu_matrix = mu * np.identity(p)
     zero_vec = np.zeros((p,1))
     
     # concatenate in upper and lower block matrices (X)
@@ -95,18 +34,67 @@ def ridge_regression(X, Y, n_folds = 10):
     lower_block = np.concatenate([zero_vec, mu_matrix], axis = 1)
     
     # concatenate in big matrix (X)
-    big_X = pd.DataFrame(np.concatenate([upper_block, lower_block], axis =0), columns = predictors)
+    big_X = np.concatenate([upper_block, lower_block], axis =0)
+        
+    # create numpy arrays for block matrices (Y)
+    Y_vec = Y.as_matrix()
+    zero_vec = np.zeros(p)
     
-    clf = least_squares(big_X, big_Y)
-    r2 = clf.score(X_test, Y_test)   
-    beta = clf.coef_.tolist()[0]
+    # concatenate in big vector
+    big_Y = np.concatenate([Y_vec, zero_vec])
     
-    # create estimator dictionary
-    est = dict()
+    # apply ordinary least squares on big matrices
+    beta, est = least_squares(big_X, big_Y, predictors)
+    
+    # retru result
+    return beta, est
 
-    # relate to predictors
-    for ind in range(len(predictors)):
-        est[predictors[ind]] = beta[ind]
+def cross_validate(X, Y, n_folds):
+    """perform cross validation for ridge regression"""
+    
+    predictors = ["const"] + X.keys().tolist()
+        
+    # auxiliary variables to store best results
+    best_r2 = 0
+    best_mu = 0
+    best_d = None
+    
+    # declare variables for data sizes
+    n, _ = X.shape
+    
+    # create cross-validation indices
+    indices = skc.KFold(n, n_folds = n_folds)
+    
+    # initialize index
+    ind=0
+    
+    mu_values = np.arange(0.00001,5,0.01)
+    r2_values = np.zeros(len(mu_values))
+    for mu in mu_values:
+        r2_values[ind] = 0
+        for train_indices, test_indices in indices:
+            
+            # create training and validation sets    
+            X_train = X.iloc[train_indices]
+            Y_train = Y.iloc[train_indices]
+            X_test = X.iloc[test_indices]
+            Y_test = Y.iloc[test_indices]
+
+            # transform into dataframes to keep variables names
+            one_test = np.ones((len(test_indices),1))
+            X_train = pd.DataFrame(X_train, columns = X.keys().tolist())
+            X_test = pd.DataFrame(np.concatenate([one_test, X_test], axis = 1), columns = predictors)
+            beta, _ = estimate(X_train, Y_train, mu)
+            r2_values[ind] += beta.score(X_test, Y_test)
+        
+        r2_values[ind] /= n_folds
+        if r2_values[ind] > best_r2:
+            best_r2 = r2_values[ind]
+            best_mu = mu
+        ind += 1
+        
+    beta, est = estimate(X_train, Y_train, best_mu)
+    r2 = beta.score(X_test, Y_test)
         
     # print results
     print "="*50
@@ -124,4 +112,3 @@ def ridge_regression(X, Y, n_folds = 10):
         print key + " : " + str(est[key])
     
     visualize("ridge", mu_values, r2_values, None)
-        
