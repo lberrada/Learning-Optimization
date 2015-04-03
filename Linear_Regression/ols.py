@@ -8,7 +8,7 @@ from lq import least_squares
 from visualize import visualize
 
 
-def estimate(X, Y, *args, **kwargs):
+def estimate(X, Y, n_folds = 10):
     """apply ordinary-least-squares regression on (X,Y) with an interception term
     
     :param X predictors data
@@ -28,8 +28,26 @@ def estimate(X, Y, *args, **kwargs):
     big_X = np.concatenate([one_vec, X], axis = 1)
     
     # compute estimator
-    beta, est = least_squares(big_X, Y, predictors)
-    r2 = beta.score(big_X, Y)
+    indices = skc.KFold(n, n_folds = n_folds)
+    
+    r2 = 0
+    for train_indices, test_indices in indices:
+            
+        # create training and validation sets    
+        X_train = X.iloc[train_indices]
+        Y_train = Y.iloc[train_indices]
+        X_test = X.iloc[test_indices]
+        Y_test = Y.iloc[test_indices]
+
+        # transform into dataframes to keep variables names
+        one_train = np.ones((len(train_indices),1))
+        one_test = np.ones((len(test_indices),1))
+        X_train = pd.DataFrame(np.concatenate([one_train, X_train], axis = 1), columns = predictors)
+        X_test = pd.DataFrame(np.concatenate([one_test, X_test], axis = 1), columns = predictors)
+        beta, est = least_squares(X_train, Y_train, predictors)
+        r2 += beta.score(X_test, Y_test)
+        
+    r2 /= n_folds
     
     # print results
     print "="*50

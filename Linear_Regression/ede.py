@@ -111,11 +111,23 @@ def cross_validate(X, Y, n_folds):
                 best_d = d
             j += 1
         i += 1
-        
-    beta, est = estimate(X, Y, best_mu, best_d)
-    ones_vec= np.ones((n,1))
-    X = pd.DataFrame(np.concatenate([ones_vec, X], axis = 1), columns = predictors)
-    r2 = beta.score(X, Y)
+    
+    r2 = 0    
+    for train_indices, test_indices in indices:
+                
+        # create training and validation sets  
+        ones_test = np.ones((len(test_indices),1))
+        X_train = X.iloc[train_indices]  
+        Y_train = Y.iloc[train_indices]
+        X_test = X.iloc[test_indices].as_matrix()
+        X_test = pd.DataFrame(np.concatenate([ones_test, X_test], axis = 1), columns = predictors)
+        Y_test = Y.iloc[test_indices]
+
+        # transform into dataframes to keep variables names
+        beta, est = estimate(X_train, Y_train, mu, d)
+        r2 += beta.score(X_test, Y_test)
+    
+    r2 /= n_folds
         
     # print results
     print "="*50
